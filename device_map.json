@@ -1,0 +1,18 @@
+[
+    {
+        "name": "Test lights",
+        "dev_id": "bbbb33i86b950ea89672",
+        "local_key": "hhtaffkjdc0csaf9tyri",
+        "mac": "aa:aa:aa:aa:aa:aa",
+        "ip": "192.168.1.404",
+        "version": "3.3"
+    },
+    {
+        "name": "Test plug",
+        "dev_id": "aaaa99667j76j606kk880b",
+        "local_key": "fsafdc0csaf9tr6",
+        "mac": "aa:aa:aa:aa:aa:aa",
+        "ip": "192.168.1.404",
+        "version": "3.3"
+    }
+]
