@@ -126,3 +126,5 @@ mappings.json
 # backup files
 *.bak
 *~
+Scripts/
+pyvenv.cfg
