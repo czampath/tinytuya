@@ -1,12 +1,20 @@
 import sys
 import json
+import argparse
 from tinytuya import OutletDevice
 
-def findDeviceByName(name):
+def findDevice(identifier, search_by='name'):
     with open('device_map.json', 'r') as file:
         data = json.load(file)
         for device in data:
-            if device['name'] == name:
+            if search_by == 'name' and device['name'] == identifier:
+                return OutletDevice(
+                    dev_id=device['dev_id'],
+                    address=device['ip'],
+                    local_key=device['local_key'],
+                    version=device['version']
+                )
+            elif search_by == 'id' and device['dev_id'] == identifier:
                 return OutletDevice(
                     dev_id=device['dev_id'],
                     address=device['ip'],
@@ -16,19 +24,26 @@ def findDeviceByName(name):
         return None
 
 def main():
-    args = sys.argv[1:]  # Exclude the script name
-    if not args:
-        print("Please provide arguments. Usage: python run.py <name> [<status1> <status2> <status3> <status4>]")
-        return
+    parser = argparse.ArgumentParser(description="Control smart devices by name or ID.")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--name', type=str, help="The name of the device.")
+    group.add_argument('--id', type=str, help="The device ID.")
+    parser.add_argument('statuses', nargs='*', help="Status values (True/False) to set.")
 
-    name = args[0]
-    device = findDeviceByName(name)
+    args = parser.parse_args()
+
+    if args.name:
+        device = findDevice(args.name, search_by='name')
+    elif args.id:
+        device = findDevice(args.id, search_by='id')
+
     if device:
-        if len(args) == 1:
+        if not args.statuses:
+            # Get Status
             data = device.status()
-            print(data)
+            print('get_status() result:', data)
         else:
-            statuses = [arg.lower() == 'true' for arg in args[1:]]
+            statuses = [arg.lower() == 'true' for arg in args.statuses]
             if len(statuses) == 1:
                 device.set_status(statuses[0])
             else:
