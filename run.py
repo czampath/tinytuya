@@ -28,7 +28,7 @@ def main():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--name', type=str, help="The name of the device.")
     group.add_argument('--id', type=str, help="The device ID.")
-    parser.add_argument('statuses', nargs='*', help="Status values (True/False) to set.")
+    parser.add_argument('statuses', nargs='*', help="Status values (True/False/null) to set.")
 
     args = parser.parse_args()
 
@@ -43,14 +43,11 @@ def main():
             data = device.status()
             print('get_status() result:', data)
         else:
-            statuses = [arg.lower() == 'true' for arg in args.statuses]
-            if len(statuses) == 1:
-                device.set_status(statuses[0])
-            else:
-                for i, status in enumerate(statuses, start=1):
-                    if i > 4:
-                        break
-                    device.set_status(status, i)
+            for i, arg in enumerate(args.statuses, start=1):
+                if arg.lower() == 'null':
+                    continue  # Skip null values
+                status = arg.lower() == 'true'
+                device.set_status(status, i)
     else:
         print("Device not found.")
 
