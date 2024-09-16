@@ -23,8 +23,7 @@ TinyTuya can also connect to the Tuya Cloud to poll status and issue commands to
 # Example Usage of TinyTuya
 import tinytuya
 
-d = tinytuya.OutletDevice('DEVICE_ID_HERE', 'IP_ADDRESS_HERE', 'LOCAL_KEY_HERE')
-d.set_version(3.3)
+d = tinytuya.Device('DEVICE_ID_HERE', 'IP_ADDRESS_HERE', 'LOCAL_KEY_HERE', version=3.3)
 data = d.status() 
 print('Device status: %r' % data)
 ```
@@ -34,8 +33,11 @@ NOTE: Devices need to be **activated** by Smart Life App.
 ## TinyTuya Installation  
 
 ```bash
-# Install TinyTuya
+# Install TinyTuya Library
 python -m pip install tinytuya
+
+# Optional: Install Command Line Tool
+pipx install tinytuya
 ```
 
 Pip will attempt to install `cryptography`, `requests` and `colorama` if not already installed.
@@ -128,6 +130,7 @@ d.turn_off()
 ### TinyTuya Module Classes and Functions 
 ```
 Classes
+
   AESCipher - Cryptography Helpers
   XenonDevice(args...) - Base Class
     Device(args...) - Tuya Class for Devices
@@ -139,16 +142,20 @@ Classes
           address (str): Device Network IP Address e.g. 10.0.1.99 or "Auto" to auto-find
           local_key (str): The encryption key
           dev_type (str): Device type for payload options (see below)
-          connection_timeout = 5 (int): Timeout in seconds
           version = 3.1 (float): Tuya Protocol (e.g. 3.1, 3.2, 3.3, 3.4, 3.5)
           persist = False (bool): Keep TCP link open
           cid = None (str): Optional sub device id
           node_id = None (str): Alias for cid
           parent = None (object): Gateway device object this is a child of
+          port = TCPPORT (int): The port to connect to device
+          connection_timeout = 5 (int): Timeout in seconds
           connection_retry_limit = 5 (int)
           connection_retry_delay = 5 (int)
-          port = TCPPORT (int): The port to connect to device
 
+          Total timeout = (connection_timeout * connection_retry_limit) + 
+                          (connection_retry_delay * (connection_retry_limit - 1))
+                          Defaults: (5 * 5) + (5 * (5 - 1)) = 45 seconds
+                        
   Cloud(apiRegion, apiKey, apiSecret, apiDeviceID, new_sign_algorithm)
 
 TinyTuya Base Functions
@@ -229,7 +236,7 @@ Cloud Functions
     getdevicelog(deviceid, start=[now - 1 day], end=[now], evtype="1,2,3,4,5,6,7,8,9,10", size=100, params={})
       -> when start or end are negative, they are the number of days before "right now"
           i.e. "start=-1" is 1 day ago, "start=-7" is 7 days ago
-
+          
 ```
 
 ### TinyTuya Error Codes
@@ -268,8 +275,7 @@ import tinytuya
 """
 OUTLET Device
 """
-d = tinytuya.OutletDevice('DEVICE_ID_HERE', 'IP_ADDRESS_HERE', 'LOCAL_KEY_HERE')
-d.set_version(3.3)
+d = tinytuya.Device('DEVICE_ID_HERE', 'IP_ADDRESS_HERE', 'LOCAL_KEY_HERE', version=3.3)
 data = d.status()  
 
 # Show status and state of first controlled switch on device
@@ -334,13 +340,10 @@ You can set up a persistent connection to a device and then monitor the state ch
 ```python
 import tinytuya
 
-d = tinytuya.OutletDevice('DEVICEID', 'DEVICEIP', 'DEVICEKEY')
-d.set_version(3.3)
-d.set_socketPersistent(True)
+d = tinytuya.OutletDevice('DEVICEID', 'DEVICEIP', 'DEVICEKEY', version=3.3, persist=True)
 
 print(" > Send Request for Status < ")
-payload = d.generate_payload(tinytuya.DP_QUERY)
-d.send(payload)
+d.status(nowait=True)
 
 print(" > Begin Monitor Loop <")
 while(True):
@@ -348,20 +351,20 @@ while(True):
     data = d.receive()
     print('Received Payload: %r' % data)
 
-    # Send keyalive heartbeat
-    print(" > Send Heartbeat Ping < ")
-    payload = d.generate_payload(tinytuya.HEART_BEAT)
-    d.send(payload)
+    # Send keep-alive heartbeat
+    if not data:
+        print(" > Send Heartbeat Ping < ")
+    	d.heartbeat()
 
     # NOTE If you are not seeing updates, you can force them - uncomment:
     # print(" > Send Request for Status < ")
-    # payload = d.generate_payload(tinytuya.DP_QUERY)
-    # d.send(payload)
+    # d.status(nowait=True)
 
     # NOTE Some smart plugs require an UPDATEDPS command to update power data
     # print(" > Send DPS Update Request < ")
     # payload = d.generate_payload(tinytuya.UPDATEDPS)
     # d.send(payload)    
+
 ```
 
 ### Tuya Cloud Access
@@ -429,21 +432,71 @@ Tuya devices use AES encryption which is not available in the Python standard li
 
 ### Command Line
 
+TinyTuya provides a built-in command line interface to get Local key, scan and poll devices.
+
+Installation
+
+```bash
+# Option-1: pip install tinytuya
+python -m tinytuya
+
+# Option-2: pipx install tinytuya
+tinytuya 
 ```
-python -m tinytuya <command> [<max_time>] [-debug] [-nocolor] [-force [192.168.0.0/24 192.168.1.0/24 ...]] [-h]
+
+Command Line Usage
+
+```
+tinytuya <command> [-debug] [-nocolor] [-h] [-yes] [-no-poll] [-device-file FILE] [-snapshot-file FILE]
 
   wizard         Launch Setup Wizard to get Tuya Local KEYs.
   scan           Scan local network for Tuya devices.
   devices        Scan all devices listed in devices.json file.
   snapshot       Scan devices listed in snapshot.json file.
   json           Scan devices listed in snapshot.json file [JSON].
-  <max_time>     Maximum time to find Tuya devices [Default=18]
-  -nocolor       Disable color text output.
-  -force         Force network scan of device IP addresses based on format:
-                 [net1/mask1 net2/mask2 ...] Auto-detects if none provided.
-  -no-broadcasts Ignore broadcast packets when force scanning.
-  -debug         Activate debug mode.
-  -h             Show usage.
+
+  Wizard
+      tinytuya wizard [-h] [-debug] [-force [0.0.0.0/24 ...]] [-no-broadcasts] [-nocolor] [-yes] [-no-poll]
+                [-device-file FILE] [-raw-response-file FILE] [-snapshot-file FILE] [-credentials-file FILE]
+                [-key KEY] [-secret SECRET] [-region {cn,eu,eu-w,in,us,us-e}] [-device DEVICE [DEVICE ...]]
+                [-dry-run] [max_time]
+
+        Common Options
+        max_time             Maximum time to find Tuya devices [Default: 18]
+        -no-broadcasts       Ignore broadcast packets when force scanning
+        -nocolor             Disable color text output.
+        -debug               Activate debug mode.
+        -h, -help            Show usage help for command.
+        -yes, -y             Answer "yes" to all questions
+        -no-poll, -no        Answer "no" to "Poll?" (overrides -yes)
+        -device-file FILE    JSON file to load devices from [Default: devices.json]
+        -snapshot-file FILE  JSON file to load/save snapshot from/to [Default: snapshot.json]
+        -force [0.0.0.0/24 ...], -f [0.0.0.0/24 ...]
+                             Force network scan of device IP addresses [Default: Auto-detects net/mask]
+        -no-broadcasts       Ignore broadcast packets when force scanning
+        -raw-response-file   JSON file to save the raw server response to [Default: tuya-raw.json]
+
+        Wizard Cloud API Options
+        -dry-run             Do not actually connect to the Cloud
+        -credentials-file    JSON file to load/save Cloud credentials from/to [Default: tinytuya.json]
+        -key KEY             Cloud API Key to use
+        -secret SECRET       Cloud API Secret to use
+        -region              Cloud API Region to use {cn,eu,eu-w,in,us,us-e}
+        -device DEVICE(S)    One or more Device ID(s) to use
+
+  Scan
+      tinytuya scan [-h] [-debug] [-force [0.0.0.0/24 ...]] [-no-broadcasts] [-nocolor] [-yes] 
+                [-device-file FILE] [-snapshot-file FILE] [max_time]
+
+  Devices
+      tinytuya devices [-h] [-debug] [-force [0.0.0.0/24 ...]] [-no-broadcasts] [-nocolor] [-yes] 
+                [-no-poll] [-device-file FILE] [-snapshot-file FILE] [max_time]
+
+  Snapshot
+      tinytuya snapshot [-h] [-debug] [-nocolor] [-yes] [-no-poll] [-device-file FILE] [-snapshot-file FILE]
+
+  JSON
+      tinytuya json [-h] [-debug] [-device-file FILE] [-snapshot-file FILE]
 
 ```
 
@@ -507,9 +560,9 @@ In addition to the built-in `OutletDevice`, `BulbDevice` and `CoverDevice` devic
 
 ```python
 # Example usage of community contributed device modules
-from tinytuya import Contrib
+from tinytuya.Contrib import ThermostatDevice
 
-thermo = Contrib.ThermostatDevice( 'abcdefghijklmnop123456', '172.28.321.475', '1234567890123abc' )
+thermo = ThermostatDevice( 'abcdefghijklmnop123456', '172.28.321.475', '1234567890123abc' )
 ```
 
 ## Tuya Data Points - DPS Table
@@ -811,9 +864,9 @@ NOTE (*) - Depending on the firmware, either 18/19/20/26/27 or 108/109/110/111/x
 A user contributed module is available for this device in the [Contrib library](https://github.com/jasonacox/tinytuya/tree/master/tinytuya/Contrib):
 
 ```python
-from tinytuya import Contrib
+from tinytuya.Contrib import ThermostatDevice
 
-thermo = Contrib.ThermostatDevice( 'abcdefghijklmnop123456', '172.28.321.475', '1234567890123abc' )
+thermo = ThermostatDevice( 'abcdefghijklmnop123456', '172.28.321.475', '1234567890123abc' )
 ```
 
 For info on the Sensor Data lists, see https://github.com/jasonacox/tinytuya/discussions/139

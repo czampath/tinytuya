@@ -9,6 +9,7 @@ with open("README.md", "r") as fh:
 INSTALL_REQUIRES = [
     'requests',      # Used for Setup Wizard - Tuya IoT Platform calls
     'colorama',      # Makes ANSI escape character sequences work under MS Windows.
+    #'netifaces',     # Used for device discovery, mainly required on multi-interface machines
 ]
 
 CHOOSE_CRYPTO_LIB = [
@@ -40,6 +41,7 @@ setuptools.setup(
     url='https://github.com/jasonacox/tinytuya',
     packages=setuptools.find_packages(exclude=("sandbox",)),
     install_requires=INSTALL_REQUIRES,
+    entry_points={"console_scripts": ["tinytuya=tinytuya.__main__:dummy"]},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

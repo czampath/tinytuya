@@ -50,7 +50,7 @@ Starting threads...
 
 ## Docker Container
 
-1. Run the Server as a Docker Container listening on port 8888. Make sure your Tinytuya `devices.json` file is located in the directory where you start the container.
+1. Run the Server as a Docker Container listening on port 8888. Make sure your Tinytuya `devices.json` file is located in the directory where you start the container. Set `HOST` to the primary IP address of your docker host, otherwise a request to Force Scan the network will scan every possible docker IP network on your host.
 
     ```bash
     docker run \
@@ -58,7 +58,10 @@ Starting threads...
         -p 8888:8888 \
         -p 6666:6666/udp \
         -p 6667:6667/udp \
-        -e DEBUG='no' \
+        -p 7000:7000/udp \
+        --network host \
+        -e DEBUGMODE='no' \
+        -e HOST='192.168.0.100' \
         -v $PWD/devices.json:/app/devices.json \
         -v $PWD/tinytuya.json:/app/tinytuya.json \
         --name tinytuya \
@@ -104,11 +107,20 @@ docker start tinytuya
 
 The UI at http://localhost:8888 allows you to view and control the devices.
 
-![image](https://user-images.githubusercontent.com/836718/227736045-adb6e359-c0c1-44b9-b9ad-7e978f6b7b84.png)
+![image](https://github.com/jasonacox/tinytuya/assets/836718/e00a1f9a-48e2-400c-afa1-7a81799efa89)
 
 ![image](https://user-images.githubusercontent.com/836718/227736057-e5392c13-554f-457e-9082-43c4d41a98ed.png)
 
 ## Release Notes
+
+### p12 - Force Scan
+
+* Added "Force Scan" button to cause server to run a network scan for devices not broadcasting.
+* Minor updates to UI for a cleaner title and footer to accommodate button.
+* Added logic to allow settings via environmental variables.
+* Add broadcast request to local network for 3.5 devices. 
+* Fix bug with cloud sync refresh losing device mappings.
+* Added "Cloud Sync" button to poll cloud for updated device data.
 
 ### t11 - Minimize Container
 
