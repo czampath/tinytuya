@@ -3,7 +3,7 @@ import json
 import argparse
 import os
 import concurrent.futures
-from tinytuya import OutletDevice
+import tinytuya
 
 TIMEOUT = 4  # Timeout in seconds
 
@@ -22,14 +22,14 @@ def findDevice(identifier, search_by='name'):
         data = json.load(file)
         for device in data:
             if search_by == 'name' and device['name'] == identifier:
-                return OutletDevice(
+                return tinytuya.OutletDevice(
                     dev_id=device['dev_id'],
                     address=device['ip'],
                     local_key=device['local_key'],
                     version=device['version']
                 )
             elif search_by == 'id' and device['dev_id'] == identifier:
-                return OutletDevice(
+                return tinytuya.OutletDevice(
                     dev_id=device['dev_id'],
                     address=device['ip'],
                     local_key=device['local_key'],
