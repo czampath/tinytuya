@@ -128,10 +128,8 @@ def wizard(color=True, retries=None, forcescan=False, nocloud=False, assume_yes=
               (config['apiKey'], config['apiSecret'], apiDeviceID,
                config['apiRegion']))
         print('')
-        if not assume_yes:
-            answer = input(subbold + '    Use existing credentials ' + normal + '(Y/n): ')
-            if answer[0:1].lower() == 'n':
-                needconfigs = True
+        print(subbold + '    Using existing credentials')
+        needconfigs = False
 
     if needconfigs and (not (nocloud and assume_yes)):
         # Ask user for config settings
@@ -185,10 +183,10 @@ def wizard(color=True, retries=None, forcescan=False, nocloud=False, assume_yes=
             return
 
         # Fetch the DP name mappings for all devices
-        if assume_yes:
-            answer = 'y'
-        else:
-            answer = input(subbold + '\nDownload DP Name mappings? ' + normal + '(Y/n): ')
+
+        print('Download DP Name mappings...')
+        answer = 'y'
+
         include_map = not bool( answer[0:1].lower() == 'n' )
 
         # Get UID from sample Device ID
@@ -267,12 +265,8 @@ def wizard(color=True, retries=None, forcescan=False, nocloud=False, assume_yes=
             print('\n\n' + bold + 'Unable to save raw file' + dim )
 
     # Find out if we should poll all devices
-    if skip_poll:
-        answer = 'n'
-    elif assume_yes:
-        answer = 'y'
-    else:
-        answer = input(subbold + '\nPoll local devices? ' + normal + '(Y/n): ')
+    print('Polling local devices...')
+    answer = 'y'
     if answer.lower().find('n') < 0:
         tinytuya.scanner.SNAPSHOTFILE = SNAPSHOTFILE
         result = tinytuya.scanner.poll_and_display( tuyadevices, color=color, scantime=retries, snapshot=True, forcescan=forcescan )
